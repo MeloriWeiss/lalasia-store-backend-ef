@@ -1,0 +1,6 @@
+@Lalasia_store_HostAddress = http://localhost:5039
+
+GET {{Lalasia_store_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
