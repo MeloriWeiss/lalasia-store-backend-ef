@@ -1,13 +1,12 @@
-﻿using System.Security.Claims;
-using Lalasia_store.Contracts.Cart;
-using Lalasia_store.Contracts.Common;
+﻿using Lalasia_store.Controllers.Contracts.Cart;
+using Lalasia_store.Controllers.Contracts.Common;
 using Lalasia_store.Models;
 using Lalasia_store.Models.Data;
-using Lalasia_store.Models.Dto;
-using Lalasia_store.Models.Types;
+using Lalasia_store.Shared.Exceptions;
+using Lalasia_store.Shared.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Lalasia_store.Controllers;
 
@@ -15,124 +14,117 @@ namespace Lalasia_store.Controllers;
 [Route("api/[controller]/[action]")]
 public class CartController : ControllerBase
 {
-    private readonly AppDbContext _dbContext;
+    private readonly ICartService _cartService;
     private readonly ILogger<CartController> _logger;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CartController(
-        AppDbContext dbContext,
-        ILogger<CartController> logger,
-        IHttpContextAccessor httpContextAccessor)
+        ICartService cartService,
+        ILogger<CartController> logger)
     {
-        _dbContext = dbContext;
+        _cartService = cartService;
         _logger = logger;
-        _httpContextAccessor = httpContextAccessor;
     }
 
     [HttpGet]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = "AccessToken")]
     public async Task<IActionResult> GetCart()
     {
         try
         {
-            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (userId is null)
-                return Unauthorized(new { error = true, message = "Не удалось распознать пользователя" });
-
-            var cartItems = _dbContext.Carts.SelectMany(cart => cart.CartItems);
-            
-            var cart = await _dbContext.Carts
-                .Select(cart => new CartDto() {Id = cart.Id, TotalPrice = cart.TotalPrice, CartItems = cart.CartItems, UserId = cart.UserId})
-                .FirstOrDefaultAsync(cart => cart.UserId.ToString() == userId);
-            
-            if (cart is null)
-                return NotFound(new { error = true, message = "Корзина не найдена" });
+            var cart = await _cartService.GetCart(User);
 
             return Ok(cart);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[GetCart] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[GetCart] server error");
-            return BadRequest(new { error = true, message = "Не удалось загрузить корзину" });
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't get the cart" });
         }
     }
 
     [HttpPost]
-    [Authorize]
-    public async Task<IActionResult> AddProduct(AddProductRequest request)
+    [Authorize(AuthenticationSchemes = "AccessToken")]
+    public async Task<IActionResult> AddProduct([FromBody] AddProductRequest request)
     {
         try
         {
-            var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _cartService.AddProduct(request, User);
 
-            if (userId is null)
-                return Unauthorized(new DefaultResponse()
-                    { Error = true, Message = "Не удалось распознать пользователя" });
-
-            var cart = await _dbContext.Carts
-                .FirstOrDefaultAsync(cart => cart.UserId.ToString() == userId);
-
-            if (cart is null)
-            {
-                cart = new Cart() { TotalPrice = 0, UserId = Guid.Parse(userId) };
-                await _dbContext.Carts.AddAsync(cart);
-                await _dbContext.SaveChangesAsync();
-            }
-
-            if (!Guid.TryParse(request.ProductId, out var productGuidId))
-                return BadRequest(new DefaultResponse() { Error = true, Message = "Не удалось распознать товар" });
-            
-            var existingProductInCart = await _dbContext.CartItems
-                .Where(cartItem => cartItem.CartId == cart.Id)
-                .FirstOrDefaultAsync(cartItem => cartItem.ProductId == productGuidId);
-            
-            if (existingProductInCart is not null)
-            {
-                existingProductInCart.ProductCount += 1;
-            }
-            else
-            {
-                var newCartItem = new CartItem() { CartId = cart.Id, ProductId = productGuidId };
-                await _dbContext.CartItems.AddAsync(newCartItem);
-            }
-            
-            await _dbContext.SaveChangesAsync();
-            
-            return Ok(new DefaultResponse() { Error = false, Message = "Товар успешно добавлен в корзину!" });
+            return Ok(result);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[GetCart] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[GetCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "[AddToCart] server error");
-            return BadRequest(new DefaultResponse() { Error = true, Message = "Не удалось добавить товар" });
+            _logger.LogError(exception, "[AddProductToCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't add product to cart" });
         }
     }
 
-    [HttpPost]
-    [Authorize]
-    public async Task<IActionResult> Update(UpdateProductRequest request)
+    [HttpPatch]
+    [Authorize(AuthenticationSchemes = "AccessToken")]
+    public async Task<IActionResult> UpdateProduct([FromBody] UpdateProductRequest request)
     {
         try
         {
-            if (!Guid.TryParse(request.ProductId, out var productGuidId))
-                return BadRequest(new DefaultResponse() { Error = true, Message = "Не удалось распознать продукт" });
+            await _cartService.UpdateProduct(request);
 
-            var cartItem =
-                await _dbContext.CartItems.FirstOrDefaultAsync(cartItem => cartItem.ProductId == productGuidId);
-
-            if (cartItem is null)
-                return NotFound(new DefaultResponse() { Error = true, Message = "Не удалось изменить количество" });
-
-            cartItem.ProductCount = request.ProductCount;
-
-            await _dbContext.SaveChangesAsync();
-
-            return Ok(new { ProductCount = cartItem.ProductCount });
+            return Ok();
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[UpdateProductInCart] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[UpdateProductInCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "[UpdateCart] server error");
-            return BadRequest(new DefaultResponse() { Error = true, Message = "Не удалось обновить корзину" });
+            _logger.LogError(exception, "[UpdateProductInCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't update the cart" });
+        }
+    }
+
+    [HttpDelete("{cartItemId}")]
+    [Authorize(AuthenticationSchemes = "AccessToken")]
+    public async Task<IActionResult> RemoveProduct(string cartItemId)
+    {
+        try
+        {
+            await _cartService.RemoveProduct(cartItemId);
+
+            return Ok();
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[RemoveProductFromCart] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[RemoveProductFromCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "[RemoveProductFromCart] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't delete the product" });
         }
     }
 }

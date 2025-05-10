@@ -7,6 +7,7 @@ public class CartItem
 {
     [Key] public Guid Id { get; set; } = Guid.NewGuid();
     public int ProductCount { get; set; } = 1;
+    public float TotalPrice { get; set; } = 0;
     
     [ForeignKey(nameof(Product))]
     public Guid ProductId { get; set; }

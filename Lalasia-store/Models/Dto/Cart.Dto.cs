@@ -7,5 +7,5 @@ public class CartDto
     public Guid Id { get; set; }
     public float TotalPrice { get; set; }
     public Guid UserId { get; set; }
-    public ICollection<CartItem> CartItems { get; set; }
+    public IEnumerable<CartItemDto> CartItems { get; set; } = [];
 }

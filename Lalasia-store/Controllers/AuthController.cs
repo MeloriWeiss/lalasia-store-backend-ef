@@ -1,11 +1,11 @@
-﻿using Lalasia_store.Contracts.Auth;
-using Lalasia_store.Core.Services.Auth;
-using Lalasia_store.Models;
+﻿using Lalasia_store.Controllers.Contracts.Auth;
+using Lalasia_store.Controllers.Contracts.Common;
 using Lalasia_store.Models.Data;
-using Lalasia_store.Models.Types;
+using Lalasia_store.Shared.Exceptions;
+using Lalasia_store.Shared.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Lalasia_store.Controllers;
 
@@ -13,71 +13,35 @@ namespace Lalasia_store.Controllers;
 [Route("api/[controller]/[action]")]
 public class AuthController : ControllerBase
 {
-    private readonly AppDbContext _dbContext;
-    private readonly UserManager<User> _userManager;
-    private readonly SignInManager<User> _signInManager;
-    private readonly RoleManager<Role> _roleManager;
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
-        AppDbContext dbContext,
-        UserManager<User> userManager,
-        SignInManager<User> signInManager,
-        RoleManager<Role> roleManager,
         IAuthService authService,
         ILogger<AuthController> logger)
     {
-        _dbContext = dbContext;
-        _userManager = userManager;
-        _signInManager = signInManager;
-        _roleManager = roleManager;
         _authService = authService;
         _logger = logger;
     }
 
     [HttpPost]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    public async Task<IActionResult> Signup([FromBody] SignupRequest request)
     {
         try
         {
-            var user = new User { UserName = request.Name, Email = request.Email, PasswordHash = request.Password };
-            // пытаемся создать пользователя с автоматическим хэшированием пароля
-            var result = await _userManager.CreateAsync(user, request.Password);
+            var authTokens = await _authService.Signup(request);
 
-            // возвращаем ошибку, если не удалось создать пользователя
-            if (!result.Succeeded)
-                return BadRequest(new { error = true, message = "Не удалось создать аккаунт" });
-
-            await _userManager.AddToRoleAsync(user, UserRoles.User.ToString());
-
-            // геренируем новые токены
-            var newAccessToken = _authService.GenerateAccessToken(user.Id);
-            var newRefreshToken = _authService.GenerateRefreshToken();
-
-            // создаём рефреш-токен и сохраняем в базу данных
-            var token = new RefreshToken
-            {
-                Token = newRefreshToken,
-                UserId = user.Id,
-                // устанавливаем время истечения
-                ExpiresAt = DateTime.UtcNow.AddDays(7),
-            };
-
-            await _dbContext.RefreshTokens.AddAsync(token);
-            await _dbContext.SaveChangesAsync();
-
-            // возвращаем на клиент актуальные токены
-            return Ok(new
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+            return Ok(authTokens);
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[Signup] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "[Register] server error");
-            return BadRequest(new { error = true, message = "Не удалось зарегистрироваться" });
+            _logger.LogError(exception, "[Signup] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Failed to signup" });
         }
     }
 
@@ -86,108 +50,63 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var user = await _userManager.FindByEmailAsync(request.Email);
+            var authTokens = await _authService.Login(request);
 
-            if (user == null)
-                return NotFound(new { error = true, message = "Пользователь не найден" });
-
-            var result = await _signInManager.PasswordSignInAsync(user, request.Password, true, false);
-
-            if (!result.Succeeded)
-                return Unauthorized(new { error = true, message = "Неправильный email или пароль" });
-
-            // ищем рефреш-токен в базе данных по старому токену
-            var existingRefreshToken =
-                await _dbContext.RefreshTokens.FirstOrDefaultAsync(token => token.UserId == user.Id);
-
-            var newAccessToken = _authService.GenerateAccessToken(user.Id);
-            var newRefreshToken = _authService.GenerateRefreshToken();
-
-            if (existingRefreshToken == null)
-            {
-                var token = new RefreshToken
-                {
-                    Token = newRefreshToken,
-                    UserId = user.Id,
-                    // устанавливаем время истечения
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
-                };
-                await _dbContext.RefreshTokens.AddAsync(token);
-            }
-            else
-            {
-                existingRefreshToken.Token = newRefreshToken;
-                existingRefreshToken.ExpiresAt = DateTime.UtcNow.AddDays(7);
-            }
-
-            await _dbContext.SaveChangesAsync();
-
-            return Ok(new
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+            return Ok(authTokens);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[Login] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[Login] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[Login] server error");
-            return BadRequest(new { error = true, message = "Не удалось войти" });
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Failed to login" });
         }
     }
 
     [HttpPost]
-    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    [Authorize(AuthenticationSchemes = "RefreshToken")]
+    public async Task<IActionResult> Refresh()
     {
         try
         {
-            // ищем рефреш-токен в базе данных по старому токену
-            var existingRefreshToken =
-                await _dbContext.RefreshTokens.FirstOrDefaultAsync(token => token.Token == request.RefreshToken);
+            var authTokens = await _authService.Refresh(User);
 
-            // проверяем токен на существование и валидность
-            if (existingRefreshToken == null || existingRefreshToken.ExpiresAt <= DateTime.UtcNow)
-                return Unauthorized(new { error = true, message = "Войдите в систему заново" });
-
-            // получаем id пользователя
-            var userId = existingRefreshToken.UserId;
-
-            // геренируем новые токены
-            var newAccessToken = _authService.GenerateAccessToken(userId);
-            var newRefreshToken = _authService.GenerateRefreshToken();
-
-            // обновляем рефреш-токен
-            existingRefreshToken.Token = newRefreshToken;
-            existingRefreshToken.ExpiresAt = DateTime.UtcNow.AddDays(7);
-
-            await _dbContext.SaveChangesAsync();
-
-            // возвращаем новые токены
-            return Ok(new
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+            return Ok(authTokens);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[Refresh] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[Refresh] server error");
-            return BadRequest(new { error = true, message = "Не удалось проверить права доступа" });
+            return BadRequest(new DefaultResponse { Error = true, Message = "Failed to refresh tokens" });
         }
     }
 
     [HttpPost]
+    [Authorize(AuthenticationSchemes = "AccessToken")]
     public async Task<IActionResult> Logout()
     {
         try
         {
-            await _signInManager.SignOutAsync();
+            var result = await _authService.Logout();
 
-            return Ok(new { error = false, message = "Вы успешно вышли из системы" });
+            return Ok(result);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[Logout] server error");
-            return BadRequest(new { error = true, message = "Ошибка выхода из системы" });
+            return BadRequest(new DefaultResponse { Error = true, Message = "Failed to logout" });
         }
     }
 }

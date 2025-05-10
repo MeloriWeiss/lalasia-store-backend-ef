@@ -1,5 +1,4 @@
 ﻿using Lalasia_store.Models.Data;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +17,6 @@ public class AppDbContext: IdentityDbContext<User, Role, Guid>
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<Order> Orders { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -28,5 +26,9 @@ public class AppDbContext: IdentityDbContext<User, Role, Guid>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<User>()
+            .HasIndex(user => user.UserName)
+            .IsUnique(false);
     }
 }

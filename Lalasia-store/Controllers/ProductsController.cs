@@ -1,7 +1,8 @@
-﻿using Lalasia_store.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Lalasia_store.Controllers.Contracts.Common;
+using Lalasia_store.Models;
+using Lalasia_store.Shared.Exceptions;
+using Lalasia_store.Shared.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Lalasia_store.Controllers;
 
@@ -9,28 +10,30 @@ namespace Lalasia_store.Controllers;
 [Route("api/[controller]/[action]")]
 public class ProductsController : ControllerBase
 {
-    private readonly AppDbContext _dbContext;
+    private readonly IProductsService _productsService;
     private readonly ILogger<ProductsController> _logger;
 
-    public ProductsController(AppDbContext dbContext, ILogger<ProductsController> logger)
+    public ProductsController(
+        IProductsService productsService,
+        ILogger<ProductsController> logger)
     {
-        _dbContext = dbContext;
+        _productsService = productsService;
         _logger = logger;
     }
 
     [HttpGet]
-    public IActionResult GetProducts()
+    public async Task<IActionResult> GetProducts([FromQuery] List<string> types, [FromQuery] int? page, [FromQuery] string? query)
     {
         try
         {
-            var products = _dbContext.Products.ToList();
+            var result = await _productsService.GetProducts(types, page, query);
 
-            return Ok(products);
+            return Ok(result);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[GetProducts] server error");
-            return BadRequest(new { error = true, message = "Не удалось загрузить товары" });
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't get the products" });
         }
     }
 
@@ -39,22 +42,24 @@ public class ProductsController : ControllerBase
     {
         try
         {
-            if (!Guid.TryParse(id, out var guidId))
-                return BadRequest(new { error = true, message = "Не удалось получить продукт" });
-            
-            var product = await _dbContext.Products.FindAsync(guidId);
-
-            if (product is null)
-            {
-                return NotFound(new { error = true, message = "Продукт не найден" });
-            }
+            var product = await _productsService.GetProduct(id);
 
             return Ok(product);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[GetProduct] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[GetProduct] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[GetProduct] server error");
-            return BadRequest(new { error = true, message = "Не удалось загрузить товары" });
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't get the product" });
         }
     }
 }
