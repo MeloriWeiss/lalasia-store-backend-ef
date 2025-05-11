@@ -24,7 +24,7 @@ public static class SeedData
                 Name = "White Aesthetic Chair",
                 Type = ProductTypes.Chair,
                 Description = "Comfortable furniture for your home",
-                ImageUrl = "/products/product-1.png",
+                ImageUrl = "products/product-1.png",
                 Price = 120.5f
             },
             new Product()
@@ -33,7 +33,7 @@ public static class SeedData
                 Name = "Wooden Cupboard 3 Row",
                 Type = ProductTypes.Cupboard,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-2.png",
+                ImageUrl = "products/product-2.png",
                 Price = 77.9f
             },
             new Product()
@@ -41,7 +41,7 @@ public static class SeedData
                 Name = "Minimalist Lounge Chair",
                 Type = ProductTypes.Chair,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-3.png",
+                ImageUrl = "products/product-3.png",
                 Price = 110.4f
             },
             new Product()
@@ -49,7 +49,7 @@ public static class SeedData
                 Name = "Working Desk Setup",
                 Type = ProductTypes.Table,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-4.png",
+                ImageUrl = "products/product-4.png",
                 Price = 55.6f
             },
             new Product()
@@ -57,7 +57,7 @@ public static class SeedData
                 Name = "Minimalist White Cupboard",
                 Type = ProductTypes.Cupboard,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-5.png",
+                ImageUrl = "products/product-5.png",
                 Price = 49.2f
             },
             new Product()
@@ -65,7 +65,7 @@ public static class SeedData
                 Name = "Wooden Dining Table",
                 Type = ProductTypes.Table,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-6.png",
+                ImageUrl = "products/product-6.png",
                 Price = 54.9f
             },
             new Product()
@@ -73,7 +73,7 @@ public static class SeedData
                 Name = "White Minimalist Vase with extemely long title",
                 Type = ProductTypes.Decoration,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-7.png",
+                ImageUrl = "products/product-7.png",
                 Price = 65.3f
             },
             new Product()
@@ -81,7 +81,7 @@ public static class SeedData
                 Name = "Plant With Clay Stand",
                 Type = ProductTypes.Decoration,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-8.png",
+                ImageUrl = "products/product-8.png",
                 Price = 91.8f
             },
             new Product()
@@ -89,7 +89,7 @@ public static class SeedData
                 Name = "Oval Gold Mirror",
                 Type = ProductTypes.Decoration,
                 Description = "Combination of wood and wool",
-                ImageUrl = "/products/product-9.png",
+                ImageUrl = "products/product-9.png",
                 Price = 34.2f
             }
         };
