@@ -109,4 +109,27 @@ public class AuthController : ControllerBase
             return BadRequest(new DefaultResponse { Error = true, Message = "Failed to logout" });
         }
     }
+    
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "AccessToken")]
+    public async Task<IActionResult> GetUserRoles()
+    {
+        try
+        {
+            var roles = await _authService.GetUserRoles(User);
+            
+            return Ok(roles);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[GetUserRoles] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "[UserChangePassword] server error");
+            return BadRequest(new DefaultResponse()
+                { Error = true, Message = "Не удалось изменить данные" });
+        }
+    }
 }

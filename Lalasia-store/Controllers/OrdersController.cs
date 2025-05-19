@@ -1,5 +1,7 @@
 ﻿using Lalasia_store.Controllers.Contracts.Common;
 using Lalasia_store.Controllers.Contracts.Orders;
+using Lalasia_store.Models.Data;
+using Lalasia_store.Models.Types;
 using Lalasia_store.Shared.Exceptions;
 using Lalasia_store.Shared.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -56,18 +58,45 @@ public class OrdersController : ControllerBase
         }
         catch (NotFoundException notFoundException)
         {
-            _logger.LogError(notFoundException, "[GetOrders] server error");
+            _logger.LogError(notFoundException, "[CreateOrder] server error");
             return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
         }
         catch (BadRequestException badRequestException)
         {
-            _logger.LogError(badRequestException, "[GetOrders] server error");
+            _logger.LogError(badRequestException, "[CreateOrder] server error");
             return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "[CreateOrder] server error");
             return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't create an order" });
+        }
+    }
+
+    [HttpPatch]
+    [Authorize(AuthenticationSchemes = "AccessToken", Roles = "Admin")]
+    public async Task<IActionResult> ChangeOrderStatus([FromBody] ChangeStatusRequest request)
+    {
+        try
+        {
+            var result = await _ordersService.ChangeOrderStatus(request);
+
+            return Ok(result);
+        }
+        catch (NotFoundException notFoundException)
+        {
+            _logger.LogError(notFoundException, "[ChangeOrderStatus] server error");
+            return NotFound(new DefaultResponse() { Error = true, Message = notFoundException.Message });
+        }
+        catch (BadRequestException badRequestException)
+        {
+            _logger.LogError(badRequestException, "[ChangeOrderStatus] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = badRequestException.Message });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "[ChangeOrderStatus] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't change the order status" });
         }
     }
 }

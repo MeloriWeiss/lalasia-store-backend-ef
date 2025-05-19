@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
+using Lalasia_store.Controllers;
 using Lalasia_store.Controllers.Contracts.Common;
 using Lalasia_store.Controllers.Contracts.Orders;
 using Lalasia_store.Models;
 using Lalasia_store.Models.Data;
 using Lalasia_store.Models.Dto;
+using Lalasia_store.Models.Types;
 using Lalasia_store.Shared.Exceptions;
 using Lalasia_store.Shared.Interfaces;
 using Lalasia_store.Shared.Utils;
@@ -39,7 +41,8 @@ public class OrdersService : IOrdersService
                 Id = order.Id, TotalPrice = order.TotalPrice, Name = order.Name, Phone = order.Phone,
                 Email = order.Email, Address = order.Address, Products = order.Products, Comment = order.Comment,
                 OrderStatus = order.OrderStatus.ToString(), CreatedAt = order.CreatedAt
-            });
+            })
+            .OrderByDescending(order => order.CreatedAt);
 
         var totalOrdersCount = orders.Count();
 
@@ -105,5 +108,25 @@ public class OrdersService : IOrdersService
         await _dbContext.SaveChangesAsync();
 
         return new DefaultResponse() { Error = false, Message = "The order was successfully created" };
+    }
+
+    public async Task<ChangeStatusResponse> ChangeOrderStatus(ChangeStatusRequest request)
+    {
+        if (!Guid.TryParse(request.OrderId, out var orderId))
+            throw new BadRequestException("The order couldn't be recognized");
+
+        var order = await _dbContext.Orders.FindAsync(orderId);
+
+        if (order is null)
+            throw new NotFoundException("The order was not found");
+
+        if (!Enum.TryParse<OrderStatus>(request.OrderStatus, out var orderStatus))
+            throw new BadRequestException("Incorrect order status");
+
+        order.OrderStatus = orderStatus;
+
+        await _dbContext.SaveChangesAsync();
+
+        return new ChangeStatusResponse() { NewStatus = orderStatus.ToString() };
     }
 }

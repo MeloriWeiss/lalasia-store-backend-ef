@@ -6,8 +6,9 @@ namespace Lalasia_store.Shared.Interfaces;
 
 public interface IAuthService
 {
-    public Task<AuthTokensResponse> Signup(SignupRequest request);
-    public Task<AuthTokensResponse> Login(LoginRequest request);
-    public Task<AuthTokensResponse> Refresh(ClaimsPrincipal claimsPrincipal);
+    public Task<AuthResponse> Signup(SignupRequest request);
+    public Task<AuthResponse> Login(LoginRequest request);
+    public Task<AuthResponse> Refresh(ClaimsPrincipal claimsPrincipal);
     public Task<DefaultResponse> Logout();
+    public Task<List<string>> GetUserRoles(ClaimsPrincipal claimsPrincipal);
 }

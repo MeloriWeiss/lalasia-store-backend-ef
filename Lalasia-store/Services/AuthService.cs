@@ -25,7 +25,7 @@ public class AuthService : IAuthService
         _signInManager = signInManager;
     }
 
-    public async Task<AuthTokensResponse> Signup(SignupRequest request)
+    public async Task<AuthResponse> Signup(SignupRequest request)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var authTokensService = scope.ServiceProvider.GetRequiredService<IAuthTokensService>();
@@ -44,20 +44,22 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded)
             throw new BadRequestException("Failed to create an account");
-        
+
         await _userManager.AddToRoleAsync(user, UserRoles.User.ToString());
 
-        var newAccessToken = authTokensService.GenerateAccessToken(user.Id);
-        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id);
+        var roles = await _userManager.GetRolesAsync(user);
+        
+        var newAccessToken = authTokensService.GenerateAccessToken(user.Id, roles);
+        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id, roles);
 
-        return new AuthTokensResponse()
+        return new AuthResponse()
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken
         };
     }
 
-    public async Task<AuthTokensResponse> Login(LoginRequest request)
+    public async Task<AuthResponse> Login(LoginRequest request)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var authTokensService = scope.ServiceProvider.GetRequiredService<IAuthTokensService>();
@@ -72,17 +74,19 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
             throw new BadRequestException("Incorrect email or password");
 
-        var newAccessToken = authTokensService.GenerateAccessToken(user.Id);
-        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id);
+        var roles = await _userManager.GetRolesAsync(user);
 
-        return new AuthTokensResponse()
+        var newAccessToken = authTokensService.GenerateAccessToken(user.Id, roles);
+        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id, roles);
+
+        return new AuthResponse()
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken
         };
     }
 
-    public async Task<AuthTokensResponse> Refresh(ClaimsPrincipal claimsPrincipal)
+    public async Task<AuthResponse> Refresh(ClaimsPrincipal claimsPrincipal)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var authTokensService = scope.ServiceProvider.GetRequiredService<IAuthTokensService>();
@@ -92,10 +96,12 @@ public class AuthService : IAuthService
         if (user is null)
             throw new NotFoundException("The user was not found");
 
-        var newAccessToken = authTokensService.GenerateAccessToken(user.Id);
-        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id);
+        var roles = await _userManager.GetRolesAsync(user);
 
-        return new AuthTokensResponse()
+        var newAccessToken = authTokensService.GenerateAccessToken(user.Id, roles);
+        var newRefreshToken = authTokensService.GenerateRefreshToken(user.Id, roles);
+
+        return new AuthResponse()
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken
@@ -107,5 +113,17 @@ public class AuthService : IAuthService
         await _signInManager.SignOutAsync();
 
         return new DefaultResponse { Error = false, Message = "Successful logout" };
+    }
+    
+    public async Task<List<string>> GetUserRoles(ClaimsPrincipal claimsPrincipal)
+    {
+        var user = await _userManager.GetUserAsync(claimsPrincipal);
+
+        if (user is null)
+            throw new NotFoundException("The user was not found");
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return roles.ToList();
     }
 }

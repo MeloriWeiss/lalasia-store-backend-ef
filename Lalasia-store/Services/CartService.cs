@@ -96,8 +96,9 @@ public class CartService : ICartService
         }
         else
         {
-            var newCartItem = new CartItem()
-                { CartId = cart.Id, ProductId = productGuidId, TotalPrice = product.Price };
+            var newCartItem = new CartItem() { CartId = cart.Id, ProductId = productGuidId,
+                    TotalPrice = product.Price * request.ProductCount, ProductCount = request.ProductCount};
+            
             await _dbContext.CartItems.AddAsync(newCartItem);
         }
 

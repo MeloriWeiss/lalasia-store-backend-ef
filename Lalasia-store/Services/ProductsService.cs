@@ -81,7 +81,7 @@ public class ProductsService : IProductsService
     public async Task<ProductDto> GetProduct(string id)
     {
         if (!Guid.TryParse(id, out var guidId))
-            throw new BadRequestException("Couldn't get the product");
+            throw new BadRequestException("The product couldn't be recognized");
 
         if (_memoryCache.TryGetValue(CacheKeys.Products, out List<ProductDto>? cacheProducts))
         {

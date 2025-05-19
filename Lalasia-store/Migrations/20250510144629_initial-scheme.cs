@@ -278,16 +278,16 @@ namespace Lalasia_store.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUsers_UserName",
-                table: "AspNetUsers",
-                column: "UserName");
-
-            migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
-                table: "AspNetUsers",
-                column: "NormalizedUserName",
-                unique: true);
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_AspNetUsers_UserName",
+            //     table: "AspNetUsers",
+            //     column: "UserName");
+            //
+            // migrationBuilder.CreateIndex(
+            //     name: "UserNameIndex",
+            //     table: "AspNetUsers",
+            //     column: "NormalizedUserName",
+            //     unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItems_CartId",

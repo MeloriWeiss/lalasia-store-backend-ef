@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System.Collections;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Lalasia_store.Shared.Config;
@@ -17,13 +18,14 @@ public class AuthTokensService : IAuthTokensService
         _jwtSettings = jwtSettings;
     }
     
-    public string GenerateAccessToken(Guid userId)
+    public string GenerateAccessToken(Guid userId, IList<string> roles)
     {
-        var claims = new[]
+        var claims = new List<Claim>()
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
         
         // var key = _jwtSettings.Value.SecretKey;
         // var testkey = Encoding.ASCII.GetBytes(key);
@@ -58,13 +60,14 @@ public class AuthTokensService : IAuthTokensService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GenerateRefreshToken(Guid userId)
+    public string GenerateRefreshToken(Guid userId, IList<string> roles)
     {
-        var claims = new[]
+        var claims = new List<Claim>()
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Value.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

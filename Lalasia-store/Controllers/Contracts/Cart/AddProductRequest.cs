@@ -1,3 +1,3 @@
 ﻿namespace Lalasia_store.Controllers.Contracts.Cart;
 
-public record AddProductRequest(string ProductId);
+public record AddProductRequest(string ProductId, int ProductCount);
