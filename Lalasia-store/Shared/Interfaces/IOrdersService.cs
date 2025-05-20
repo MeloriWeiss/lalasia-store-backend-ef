@@ -11,4 +11,5 @@ public interface IOrdersService
     public Task<GetOrdersResponse> GetOrders(int page, ClaimsPrincipal claimsPrincipal);
     public Task<DefaultResponse> CreateOrder(CreateOrderRequest request, ClaimsPrincipal claimsPrincipal);
     public Task<ChangeStatusResponse> ChangeOrderStatus(ChangeStatusRequest request);
+    public Task<GetOrdersResponse> GetAllOrders(int page, ClaimsPrincipal claimsPrincipal);
 }

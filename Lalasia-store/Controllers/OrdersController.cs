@@ -99,4 +99,21 @@ public class OrdersController : ControllerBase
             return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't change the order status" });
         }
     }
+
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "AccessToken", Roles = "Admin")]
+    public async Task<IActionResult> GetAllOrders([FromQuery] int page)
+    {
+        try
+        {
+            var result = await _ordersService.GetAllOrders(page, User);
+
+            return Ok(result);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "[GetAllOrders] server error");
+            return BadRequest(new DefaultResponse() { Error = true, Message = "Couldn't get the orders" });
+        }
+    }
 }

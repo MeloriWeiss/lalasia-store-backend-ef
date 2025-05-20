@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Lalasia_store.Controllers;
 using Lalasia_store.Controllers.Contracts.Common;
 using Lalasia_store.Controllers.Contracts.Orders;
 using Lalasia_store.Models;
@@ -128,5 +127,26 @@ public class OrdersService : IOrdersService
         await _dbContext.SaveChangesAsync();
 
         return new ChangeStatusResponse() { NewStatus = orderStatus.ToString() };
+    }
+
+    public async Task<GetOrdersResponse> GetAllOrders(int page, ClaimsPrincipal claimsPrincipal)
+    {
+        var orders = _dbContext.Orders
+            .Select(order => new OrderDto()
+            {
+                Id = order.Id, TotalPrice = order.TotalPrice, Name = order.Name, Phone = order.Phone,
+                Email = order.Email, Address = order.Address, Products = order.Products, Comment = order.Comment,
+                OrderStatus = order.OrderStatus.ToString(), CreatedAt = order.CreatedAt
+            })
+            .OrderByDescending(order => order.CreatedAt);
+
+        var totalOrdersCount = orders.Count();
+
+        var returnOrders = await orders
+            .Skip((page - 1) * 10)
+            .Take(10)
+            .ToListAsync();
+
+        return new GetOrdersResponse() { OrdersCount = totalOrdersCount, Orders = returnOrders };
     }
 }
