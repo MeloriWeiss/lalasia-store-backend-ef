@@ -1,4 +1,5 @@
 using System.Text;
+using Lalasia_store.App.Middlewares;
 using Lalasia_store.Models;
 using Lalasia_store.Models.Data;
 using Lalasia_store.Models.Types;
@@ -7,8 +8,10 @@ using Lalasia_store.Shared.Config;
 using Lalasia_store.Shared.Interfaces;
 using Lalasia_store.Shared.Utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -122,8 +125,17 @@ app.UseStaticFiles();
 app.UseCors();
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<MetricsMiddleware>();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapMetrics();
+});
 
 app.MapControllers();
 app.Run();

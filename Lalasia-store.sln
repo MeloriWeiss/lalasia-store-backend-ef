@@ -2,6 +2,13 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lalasia-store", "Lalasia-store\Lalasia-store.csproj", "{539D1138-F18E-4AA5-A090-C4EF1F2770EE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{67D364AF-4538-4BA2-A8AC-5F0303F03AB4}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+		prometheus.yml = prometheus.yml
+		datasources.yaml = datasources.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +19,7 @@ Global
 		{539D1138-F18E-4AA5-A090-C4EF1F2770EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{539D1138-F18E-4AA5-A090-C4EF1F2770EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{539D1138-F18E-4AA5-A090-C4EF1F2770EE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal
